@@ -3,7 +3,7 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
-export class Viewer extends HTMLElement {
+export class Viewer {
   renderer: THREE.WebGLRenderer;
   scene: THREE.Scene;
   camera: THREE.PerspectiveCamera;
@@ -15,18 +15,18 @@ export class Viewer extends HTMLElement {
   gltf: any;
   character: any;
   animationsClips: any;
-  mixer: THREE.AnimationMixer;
-  action: THREE.AnimationAction;
+  mixer?: THREE.AnimationMixer;
+  action?: THREE.AnimationAction;
   orbitControls: OrbitControls;
   clock: THREE.Clock;
 
   constructor() {
-    super();
+    console.log("mj: 111");
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
     this.renderer.shadowMap.enabled = true; // 그림자를 사용하도록 설정
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap; // 그림자의 형태를 설정
     this.renderer.setSize(window.innerWidth, window.innerHeight);
-    this.appendChild(this.renderer.domElement);
+    document.body.appendChild(this.renderer.domElement);
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(
       60,
@@ -64,31 +64,7 @@ export class Viewer extends HTMLElement {
     this.scene.add(this.directionalLight);
 
     this.glfLoader = new GLTFLoader();
-    this.gltf = async () => {
-      return await this.glfLoader.loadAsync("dancer.glb");
-    };
-    this.character = this.gltf.scene;
-    this.animationsClips = this.gltf.animations;
-    this.character.position.y = 0.8;
-    this.character.scale.set(0.01, 0.01, 0.01);
-    this.character.castShadow = true; // 캐릭터가 그림자를 드리워 지도록 설정
-    this.character.receiveShadow = true; // 캐릭터가 그림자를 받을 수 있도록 설정
-    this.character.traverse((child: any) => {
-      if (child.isMesh) {
-        child.castShadow = true;
-        child.receiveShadow = true;
-      }
-    });
-    this.scene.add(this.character);
-
-    this.mixer = new THREE.AnimationMixer(this.character);
-    this.action = this.mixer.clipAction(this.animationsClips[3]); // 애니메이션 클립을 설정
-    this.action.setLoop(THREE.LoopRepeat, 2); // 애니메이션의 반복 설정
-    this.action.play(); // 애니메이션을 실행
-
-    setTimeout(() => {
-      this.mixer.clipAction(this.animationsClips[3]).paused = true; // 3초 후에 애니메이션을 멈춘다.
-    }, 3000);
+    this.loadCharacter();
 
     this.orbitControls = new OrbitControls(
       this.camera,
@@ -109,6 +85,34 @@ export class Viewer extends HTMLElement {
     this.render();
   }
 
+  async loadCharacter() {
+    this.gltf = await this.glfLoader.loadAsync("dancer.glb");
+    this.character = this.gltf.scene;
+    this.animationsClips = this.gltf.animations;
+    this.character.position.y = 0.8;
+    this.character.scale.set(0.01, 0.01, 0.01);
+    this.character.castShadow = true; // 캐릭터가 그림자를 드리워 지도록 설정
+    this.character.receiveShadow = true; // 캐릭터가 그림자를 받을 수 있도록 설정
+    this.character.traverse((child: any) => {
+      if (child.isMesh) {
+        child.castShadow = true;
+        child.receiveShadow = true;
+      }
+    });
+    this.scene.add(this.character);
+
+    this.mixer = new THREE.AnimationMixer(this.character);
+    this.action = this.mixer.clipAction(this.animationsClips[3]); // 애니메이션 클립을 설정
+    this.action.setLoop(THREE.LoopRepeat, 2); // 애니메이션의 반복 설정
+    this.action.play(); // 애니메이션을 실행
+
+    setTimeout(() => {
+      if (this.mixer) {
+        this.mixer.clipAction(this.animationsClips[3]).paused = true; // 3초 후에 애니메이션을 멈춘다.
+      }
+    }, 3000);
+  }
+
   render = () => {
     requestAnimationFrame(this.render); // 내부에서 자신을 호출하여 애니메이션을 수행한다.
 
@@ -121,4 +125,7 @@ export class Viewer extends HTMLElement {
     }
   };
 }
-customElements.define("pov-3d", Viewer);
+
+document.addEventListener("DOMContentLoaded", () => {
+  new Viewer();
+});
