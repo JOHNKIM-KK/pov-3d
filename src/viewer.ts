@@ -2,6 +2,26 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import {
+  AnimationClip,
+  Box3,
+  Object3D,
+  PerspectiveCamera,
+  Vector3,
+} from "three";
+import { FBXLoader } from "three/examples/jsm/loaders/FBXLoader.js";
+
+declare global {
+  interface Window {
+    VIEWER: {
+      Viewer: typeof Viewer | null;
+    };
+  }
+}
+
+window.VIEWER = {
+  Viewer: null,
+};
 
 export class Viewer {
   renderer: THREE.WebGLRenderer;
@@ -11,39 +31,43 @@ export class Viewer {
   floorMaterial: THREE.MeshStandardMaterial;
   floor: THREE.Mesh;
   directionalLight: THREE.DirectionalLight;
-  glfLoader: GLTFLoader;
+  glfLoader?: GLTFLoader;
+  fbxLoader?: FBXLoader;
   gltf: any;
-  character: any;
+  fbx: any;
   animationsClips: any;
   mixer?: THREE.AnimationMixer;
   action?: THREE.AnimationAction;
   orbitControls: OrbitControls;
   clock: THREE.Clock;
+  el: HTMLElement;
+  options: any;
+  content: any;
 
-  constructor() {
-    console.log("mj: 111");
-    this.renderer = new THREE.WebGLRenderer({ antialias: true });
+  constructor(element: HTMLElement) {
+    this.el = element;
+    this.renderer = new THREE.WebGLRenderer({ antialias: true }); // 렌더러를 생성한다.
     this.renderer.shadowMap.enabled = true; // 그림자를 사용하도록 설정
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap; // 그림자의 형태를 설정
     this.renderer.setSize(window.innerWidth, window.innerHeight);
-    document.body.appendChild(this.renderer.domElement);
+    this.el.appendChild(this.renderer.domElement);
     this.scene = new THREE.Scene();
-    this.camera = new THREE.PerspectiveCamera(
-      60,
-      window.innerWidth / window.innerHeight,
-      0.1,
-      100,
+
+    const fov = 60; // 시야각 설정
+    const aspect = this.el.clientWidth / this.el.clientHeight; // 종횡비 설정
+    this.camera = new PerspectiveCamera(fov, aspect, 0.01, 1000); // 카메라 생성
+
+    this.floorGeometry = new THREE.PlaneGeometry(
+      this.el.clientWidth,
+      this.el.clientHeight,
+      20,
+      20,
     );
-
-    this.camera.position.y = 5;
-    this.camera.position.z = 5;
-    this.camera.position.x = 5;
-
-    this.floorGeometry = new THREE.PlaneGeometry(20, 20, 20, 20);
     this.floorMaterial = new THREE.MeshStandardMaterial({
       color: 0xbbbbbb,
     }); // 바닥의 색상
     this.floor = new THREE.Mesh(this.floorGeometry, this.floorMaterial);
+    this.floor.position.y = -40; // 바닥의 위치 설정
     this.floor.rotation.x = -Math.PI / 2; // 바닥을 x축으로 90도 회전 ( 회전값은 라디안 값을 쓰게되는데 라디안은 PI가 180도 이므로 90도는 PI/2 이다. 180도는 PI 이다. 360도는 2PI 이다.  )
     this.floor.receiveShadow = true; // 바닥이 그림자를 받을 수 있도록 설정
     this.floor.castShadow = true; // 바닥이 그림자를 드리워 지도록 설정
@@ -63,9 +87,6 @@ export class Viewer {
     this.directionalLight.shadow.camera.far = 100; // 그림자의 카메라의 near 설정
     this.scene.add(this.directionalLight);
 
-    this.glfLoader = new GLTFLoader();
-    this.loadCharacter();
-
     this.orbitControls = new OrbitControls(
       this.camera,
       this.renderer.domElement,
@@ -73,44 +94,76 @@ export class Viewer {
     this.orbitControls.enableDamping = true; // 감속 설정
     this.orbitControls.dampingFactor = 0.03; // 감속 계수
 
-    window.addEventListener("resize", () => {
-      this.renderer.setSize(window.innerWidth, window.innerHeight);
-      this.camera.aspect = window.innerWidth / window.innerHeight;
-      this.camera.updateProjectionMatrix();
-      this.renderer.render(this.scene, this.camera);
-    });
+    window.addEventListener("resize", this.resize.bind(this), false);
 
     this.clock = new THREE.Clock();
     this.render = this.render.bind(this);
     this.render();
   }
 
-  async loadCharacter() {
-    this.gltf = await this.glfLoader.loadAsync("dancer.glb");
-    this.character = this.gltf.scene;
-    this.animationsClips = this.gltf.animations;
-    this.character.position.y = 0.8;
-    this.character.scale.set(0.01, 0.01, 0.01);
-    this.character.castShadow = true; // 캐릭터가 그림자를 드리워 지도록 설정
-    this.character.receiveShadow = true; // 캐릭터가 그림자를 받을 수 있도록 설정
-    this.character.traverse((child: any) => {
-      if (child.isMesh) {
-        child.castShadow = true;
-        child.receiveShadow = true;
-      }
-    });
-    this.scene.add(this.character);
+  LoadModel = (object: Object3D, clips: AnimationClip[]) => {
+    // this.clear();
 
-    this.mixer = new THREE.AnimationMixer(this.character);
-    this.action = this.mixer.clipAction(this.animationsClips[3]); // 애니메이션 클립을 설정
+    object.updateMatrixWorld(); // 오브젝트의 월드 매트릭스를 업데이트 해준다.
+    const box = new Box3().setFromObject(object); // 오브젝트의 크기를 구한다.
+    const size = box.getSize(new Vector3()).length(); // 오브젝트의 크기를 구한다.
+    const center = box.getCenter(new Vector3()); // 오브젝트의 중심을 구한다.
+
+    object.position.x += object.position.x - center.x; // 오브젝트의 위치를 중심으로 이동시킨다.
+    object.position.y += object.position.y - center.y; // 오브젝트의 위치를 중심으로 이동시킨다.
+    object.position.z += object.position.z - center.z; // 오브젝트의 위치를 중심으로 이동시킨다.
+    this.orbitControls.maxDistance = size * 10; // 오브젝트의 크기에 따라 카메라의 최대 거리를 설정한다.
+
+    this.camera.near = size / 100; // 카메라의 near 설정
+    this.camera.far = size * 100; // 카메라의 far 설정
+    this.camera.updateProjectionMatrix(); // 카메라의 투영 매트릭스를 업데이트 해준다.
+
+    this.camera.position.copy(center); // 카메라의 위치를 오브젝트의 중심으로 설정
+    this.camera.position.x += size / 2.0; //  카메라의 위치를 오브젝트의 중심으로 설정
+    this.camera.position.y += size / 5.0; // 카메라의 위치를 오브젝트의 중심으로 설정
+    this.camera.position.z += size / 2.0; // 카메라의 위치를 오브젝트의 중심으로 설정
+    this.camera.lookAt(center); // 카메라가 바라보는 방향을 설정해준다.
+
+    if (clips.length === 0) {
+      this.scene.add(object);
+      return;
+    }
+
+    this.animationsClips = clips;
+
+    object.position.y = 0.8;
+    object.scale.set(0.3, 0.3, 0.3);
+
+    this.scene.add(object);
+
+    this.mixer = new THREE.AnimationMixer(object);
+
+    this.action = this.mixer.clipAction(this.animationsClips[0]); // 애니메이션 클립을 설정
     this.action.setLoop(THREE.LoopRepeat, 2); // 애니메이션의 반복 설정
     this.action.play(); // 애니메이션을 실행
+  };
 
-    setTimeout(() => {
-      if (this.mixer) {
-        this.mixer.clipAction(this.animationsClips[3]).paused = true; // 3초 후에 애니메이션을 멈춘다.
-      }
-    }, 3000);
+  resize = () => {
+    this.camera.aspect = window.innerWidth / window.innerHeight;
+    this.camera.updateProjectionMatrix();
+    this.renderer.setSize(window.innerWidth, window.innerHeight);
+  };
+
+  async load(file: string) {
+    const fileExtension = file.split(".").pop();
+
+    if (!fileExtension) return;
+
+    if (fileExtension === "glb") {
+      this.glfLoader = new GLTFLoader();
+      this.gltf = await this.glfLoader.loadAsync(file);
+      this.LoadModel(this.gltf.scene, this.gltf.animations);
+    }
+    if (fileExtension === "fbx") {
+      this.fbxLoader = new FBXLoader();
+      this.fbx = await this.fbxLoader.loadAsync(file);
+      this.LoadModel(this.fbx, this.fbx.animations);
+    }
   }
 
   render = () => {
@@ -125,7 +178,3 @@ export class Viewer {
     }
   };
 }
-
-document.addEventListener("DOMContentLoaded", () => {
-  new Viewer();
-});

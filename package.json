@@ -2,7 +2,7 @@
   "name": "pov-3d",
   "private": true,
   "version": "0.0.1",
-  "main": "index.js",
+  "main": "viewer.ts",
   "repository": "https://github.com/polyground/pov-3d.git",
   "author": "김명준 <acspp2017@gmail.com>",
   "license": "MIT",
