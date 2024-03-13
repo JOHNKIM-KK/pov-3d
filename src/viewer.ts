@@ -36,6 +36,7 @@ export interface ViewerConfig {
 }
 
 export class Viewer {
+  object: Object3D;
   renderer: THREE.WebGLRenderer;
   scene: THREE.Scene;
   camera: THREE.PerspectiveCamera;
@@ -143,6 +144,9 @@ export class Viewer {
   LoadModel = (object: Object3D, clips: AnimationClip[]) => {
     // this.clear();
 
+    this.object = object;
+    console.log(this.object);
+
     object.updateMatrixWorld(); // 오브젝트의 월드 매트릭스를 업데이트 해준다.
     const box = new Box3().setFromObject(object); // 오브젝트의 박스를 구한다.
     const size = box.getSize(new Vector3()); // 오브젝트의 크기를 구한다.
@@ -226,4 +230,17 @@ export class Viewer {
       ); /* 믹서를 업데이트 해준다. 믹서는 애니메이션을 업데이트 해주는 역할을 한다. */
     }
   };
+
+  mappingTexture = (path: any, name: string) => {
+    if (!path || !name) return;
+    const texture = new THREE.TextureLoader().load(path);
+    
+    this.object.traverse((node: any) => {
+      if (node.isMesh) {
+        const material = node.material;
+        material[name] = texture;
+      }
+    });
+    
+  }
 }

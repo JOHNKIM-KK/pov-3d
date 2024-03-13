@@ -6,5 +6,15 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   const exampleViewer = new Viewer(wrapper);
-  exampleViewer.load("../public/Old_ToadCenser.glb");
+  await exampleViewer.load("../public/a000305_HP.fbx");
+  exampleViewer.mappingTexture("../public/Dirty Color Palette_4K_N.png", "normalMap");
+  exampleViewer.mappingTexture("../public/Dirty Color Palette_4K_BC.png", "map");
+  exampleViewer.mappingTexture("../public/Dirty Color Palette_4K_AO.png", "aoMap");
+  // exampleViewer.mappingTexture("../public/Dirty Color Palette_4K_R.png", "roughnessMap");
+  // exampleViewer.mappingTexture("../public/Dirty Color Palette_4K_M.png", "metalnessMap");
+  
+  // exampleViewer.mappingTexture("../public/Dirty Color Palette_4K_AO.png", "aoMap");
+
+  
+  
 });
