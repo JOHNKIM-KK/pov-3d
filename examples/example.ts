@@ -1,6 +1,6 @@
 import { Viewer } from "../src/viewer.ts";
 document.addEventListener("DOMContentLoaded", async () => {
-  const wrapper: HTMLElement | null = document.querySelector(".wrap");
+  const wrapper: HTMLElement | null = document.querySelector(".my_viewer");
   if (!wrapper) {
     throw new Error("Wrapper not found");
   }

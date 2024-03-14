@@ -36,7 +36,7 @@ export interface ViewerConfig {
 }
 
 export class Viewer {
-  object: Object3D;
+  object: Object3D | undefined;
   renderer: THREE.WebGLRenderer;
   scene: THREE.Scene;
   camera: THREE.PerspectiveCamera;
@@ -93,9 +93,12 @@ export class Viewer {
       bgColor: "#191919",
     };
 
-    this.renderer = new THREE.WebGLRenderer({ antialias: true }); // 렌더러를 생성한다.
+    this.renderer = new THREE.WebGLRenderer({
+      antialias: true,
+    }); // 렌더러를 생성한다.
+
     this.renderer.setPixelRatio(window.devicePixelRatio); // 렌더러의 픽셀 비율을 설정
-    this.renderer.setSize(window.innerWidth, window.innerHeight); // 렌더러의 사이즈를 설정
+    this.renderer.setSize(element.clientWidth, element.clientHeight, false); // 렌더러의 사이즈를 설정
 
     this.pmremGenerator = new PMREMGenerator(this.renderer); // PMREMGenerator를 생성한다.
     this.pmremGenerator.compileEquirectangularShader(); // PMREMGenerator의 쉐이더를 컴파일한다.
@@ -141,11 +144,8 @@ export class Viewer {
     this.render();
   }
 
-  LoadModel = (object: Object3D, clips: AnimationClip[]) => {
-    // this.clear();
-
+  loadModel = (object: Object3D, clips: AnimationClip[]) => {
     this.object = object;
-    console.log(this.object);
 
     object.updateMatrixWorld(); // 오브젝트의 월드 매트릭스를 업데이트 해준다.
     const box = new Box3().setFromObject(object); // 오브젝트의 박스를 구한다.
@@ -184,9 +184,9 @@ export class Viewer {
   };
 
   resize = () => {
-    this.camera.aspect = window.innerWidth / window.innerHeight;
+    this.camera.aspect = this.el.clientWidth / this.el.clientHeight;
     this.camera.updateProjectionMatrix();
-    this.renderer.setSize(window.innerWidth, window.innerHeight);
+    this.renderer.setSize(this.el.clientWidth, this.el.clientHeight);
   };
 
   async load(file: string) {
@@ -203,12 +203,12 @@ export class Viewer {
 
       this.gltf = await this.glfLoader.loadAsync(file);
 
-      this.LoadModel(this.gltf.scene, this.gltf.animations);
+      this.loadModel(this.gltf.scene, this.gltf.animations);
     }
     if (fileExtension === "fbx") {
       this.fbxLoader = new FBXLoader();
       this.fbx = await this.fbxLoader.loadAsync(file);
-      this.LoadModel(this.fbx, this.fbx.animations);
+      this.loadModel(this.fbx, this.fbx.animations);
     }
   }
 
@@ -232,15 +232,14 @@ export class Viewer {
   };
 
   mappingTexture = (path: any, name: string) => {
-    if (!path || !name) return;
+    if (!path || !name || !this.object) return;
     const texture = new THREE.TextureLoader().load(path);
-    
+
     this.object.traverse((node: any) => {
       if (node.isMesh) {
         const material = node.material;
         material[name] = texture;
       }
     });
-    
-  }
+  };
 }
