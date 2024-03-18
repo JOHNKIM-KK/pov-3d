@@ -1,6 +1,6 @@
 {
   "name": "pov-3d",
-  "private": true,
+  "private": false,
   "version": "0.0.1",
   "main": "viewer.ts",
   "repository": "https://github.com/polyground/pov-3d.git",
