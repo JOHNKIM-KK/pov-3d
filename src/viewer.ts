@@ -159,25 +159,6 @@ export class Viewer implements ViewerImpl {
       this.scene.add(pos.light);
     });
 
-    const directionalHelper = new THREE.DirectionalLightHelper(
-      directionalLight,
-      100,
-    );
-    this.scene.add(directionalHelper);
-    const directionalHelper2 = new THREE.DirectionalLightHelper(
-      directionalLight2,
-      100,
-      0xff0000, //  빨간색
-    );
-    this.scene.add(directionalHelper2);
-
-    const directionalHelper3 = new THREE.DirectionalLightHelper(
-      directionalLight3,
-      100,
-      0x00ff0f, // 분홍색
-    );
-    this.scene.add(directionalHelper3);
-
     this.orbitControls = new OrbitControls(
       this.camera,
       this.renderer.domElement,
@@ -220,9 +201,6 @@ export class Viewer implements ViewerImpl {
     this.camera.position.x = size / 2.0;
     this.camera.position.y = size / 5.0;
     this.camera.position.z = size;
-    // this.camera.position.x += size / 2.0;
-    // this.camera.position.y += size / 5.0;
-    // this.camera.position.z += size / 2.0;
     this.camera.lookAt(center); // 카메라가 바라보는 방향을 설정해준다.
 
     if (isFbx && this.state.setBaseColor) {
@@ -231,7 +209,6 @@ export class Viewer implements ViewerImpl {
           node.material.map = null;
           node.material.color.set(this.state.BaseColor || "0x696969");
           node.material.shininess = 100;
-          console.log("mj:  node.material", node.material);
           node.needsUpdate = true; // Update the material
         }
       });
@@ -297,6 +274,9 @@ export class Viewer implements ViewerImpl {
   private render = () => {
     requestAnimationFrame(this.render); // 내부에서 자신을 호출하여 애니메이션을 수행한다.
 
+    if (this.state.autoRotate) {
+      this.object?.rotateY(0.005);
+    }
     this.renderer.render(this.scene, this.camera); // 렌더링을 수행한다.
     this.orbitControls.update(); // 컨트롤을 업데이트 해준다.
     if (this.mixer) {
