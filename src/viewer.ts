@@ -8,6 +8,7 @@ import {
   Color,
   LoadingManager,
   Object3D,
+  Object3DEventMap,
   PerspectiveCamera,
   PMREMGenerator,
   REVISION,
@@ -20,6 +21,8 @@ import { KTX2Loader } from "three/examples/jsm/loaders/KTX2Loader.js";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { EXRLoader } from "three/examples/jsm/loaders/EXRLoader.js";
 
+import { ViewerImpl, ViewerOptions } from "./viewer.type.ts";
+
 const MANAGER = new LoadingManager();
 const THREE_PATH = `https://unpkg.com/three@0.${REVISION}.x`;
 
@@ -29,38 +32,6 @@ const DRACO_LOADER = new DRACOLoader(MANAGER).setDecoderPath(
 const KTX2_LOADER = new KTX2Loader(MANAGER).setTranscoderPath(
   `${THREE_PATH}/examples/jsm/libs/basis/`,
 );
-
-export interface ViewerOptions {
-  background: boolean;
-  autoRotate: boolean;
-  ambientIntensity: number;
-  ambientColor: string;
-  directIntensity: number;
-  directColor: string;
-  bgColor: string;
-  setBaseColor?: boolean;
-  BaseColor?: string;
-}
-
-interface ViewerImpl {
-  object: Object3D | undefined;
-  renderer: THREE.WebGLRenderer;
-  scene: THREE.Scene;
-  camera: THREE.PerspectiveCamera;
-  ambientLight: THREE.AmbientLight;
-  mixer?: THREE.AnimationMixer;
-  action?: THREE.AnimationAction;
-  orbitControls: OrbitControls;
-  clock: THREE.Clock;
-  el: HTMLElement;
-  pmremGenerator: PMREMGenerator;
-  basicEnvironment: any;
-  backgroundColor: Color;
-  state: ViewerOptions;
-  load: (file: string) => Promise<void>;
-  mappingTexture: (path: any, name: string) => void;
-  mappingEnvironment: (enviroment: any) => void;
-}
 
 export class Viewer implements ViewerImpl {
   object: Object3D | undefined;
@@ -176,8 +147,8 @@ export class Viewer implements ViewerImpl {
     this.render();
   }
 
-  private loadModel = (
-    object: Object3D,
+  loadModel = (
+    object: Object3D<Object3DEventMap>,
     clips: AnimationClip[],
     isFbx?: boolean,
   ) => {
@@ -230,13 +201,13 @@ export class Viewer implements ViewerImpl {
     this.action.play(); // 애니메이션을 실행
   };
 
-  private resize = () => {
+  resize = () => {
     this.camera.aspect = this.el.clientWidth / this.el.clientHeight;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(this.el.clientWidth, this.el.clientHeight);
   };
 
-  public async load(file: string) {
+  async load(file: string) {
     const fileExtension = file.split(".").pop();
 
     if (!fileExtension) return;
@@ -259,7 +230,7 @@ export class Viewer implements ViewerImpl {
     }
   }
 
-  public async mappingEnvironment(enviroment: any) {
+  async mappingEnvironment(enviroment: any) {
     const envMap = await new EXRLoader().loadAsync(enviroment);
 
     this.pmremGenerator.fromEquirectangular(envMap).texture;
@@ -271,7 +242,7 @@ export class Viewer implements ViewerImpl {
       : this.backgroundColor;
   }
 
-  private render = () => {
+  render = () => {
     requestAnimationFrame(this.render); // 내부에서 자신을 호출하여 애니메이션을 수행한다.
 
     if (this.state.autoRotate) {
@@ -286,7 +257,7 @@ export class Viewer implements ViewerImpl {
     }
   };
 
-  public mappingTexture = (path: any, name: string) => {
+  mappingTexture = (path: any, name: string) => {
     if (!path || !name || !this.object) return;
     const texture = new THREE.TextureLoader().load(path);
     texture.colorSpace = THREE.SRGBColorSpace; // 텍스쳐의 색상 공간을 설정
