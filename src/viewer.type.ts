@@ -6,7 +6,6 @@ import {
   PMREMGenerator,
 } from "three";
 import * as THREE from "three";
-import { ViewerOptions } from "./viewer";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
 export interface ViewerImpl {
